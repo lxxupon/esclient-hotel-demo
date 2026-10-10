@@ -4,6 +4,7 @@ import cn.itcast.hotel.pojo.Hotel;
 import cn.itcast.hotel.pojo.HotelDoc;
 import cn.itcast.hotel.service.IHotelService;
 import com.alibaba.fastjson.JSON;
+import org.apache.http.HttpHost;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.action.get.GetRequest;
@@ -11,8 +12,11 @@ import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.client.RequestOptions;
+import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestHighLevelClient;
-import org.elasticsearch.xcontent.XContentType;
+import org.elasticsearch.common.xcontent.XContentType;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -23,10 +27,6 @@ import java.util.List;
 @SpringBootTest
 class HotelDocumentTest {
 
-    /**
-     * 容器统一管理的单例客户端，不再手动 new / close
-     */
-    @Autowired
     private RestHighLevelClient client;
 
     @Autowired
@@ -102,4 +102,19 @@ class HotelDocumentTest {
         // 3.发送请求
         client.bulk(request, RequestOptions.DEFAULT);
     }
+
+    @BeforeEach
+    void setUp() {
+        client = new RestHighLevelClient(RestClient.builder(
+                HttpHost.create("http://192.168.150.101:9200")
+        ));
+    }
+
+    @AfterEach
+    void tearDown() throws IOException {
+        client.close();
+    }
+
+
+
 }

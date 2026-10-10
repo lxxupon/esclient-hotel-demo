@@ -148,7 +148,7 @@
 
 <script>
   // 设置后台服务地址
-  axios.defaults.baseURL = "http://localhost:8089";
+  axios.defaults.baseURL = "http://127.0.0.1:8089";
   axios.defaults.timeout = 3000;
 
   let app = new Vue({
@@ -364,18 +364,12 @@
 
         axios.post("/hotel/list", params)
           .then(resp => {
-            if(!resp.data.hotels){
-              this.hotels = resp.data;
-              this.total = 271;
-              this.totalPage = 28;
-            }else{
-              this.hotels = resp.data.hotels;
-              this.total = resp.data.total;
-              this.totalPage = Math.ceil((this.total + 5 - 1) / 5);
-            }
+            this.hotels = resp.data.hotels;
+            this.total = resp.data.total;
+            this.totalPage = Math.floor((this.total + 5 - 1) / 5);
             if (location) {
               this.setMapCenter(location);
-            } else {
+            } else if(this.hotels && this.hotels.length > 0){
               this.setMapCenter(this.hotels[0].location);
             }
             this.initMarker();

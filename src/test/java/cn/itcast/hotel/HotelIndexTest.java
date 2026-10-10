@@ -7,8 +7,7 @@ import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.client.indices.CreateIndexRequest;
 import org.elasticsearch.client.indices.GetIndexRequest;
-import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.xcontent.XContentType;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,7 +28,6 @@ class HotelIndexTest {
         CreateIndexRequest request = new CreateIndexRequest("hotel");
         // 2.准备请求参数
         request.source(MAPPING_TEMPLATE, XContentType.JSON);
-
         // 3.发送请求
         client.indices().create(request, RequestOptions.DEFAULT);
     }
@@ -43,12 +41,11 @@ class HotelIndexTest {
 
         System.out.println(isExists ? "存在" : "不存在");
     }
-
     @Test
     void testDeleteIndex() throws IOException {
         // 1.准备Request
         DeleteIndexRequest request = new DeleteIndexRequest("hotel");
-        // 2.发送请求
+        // 3.发送请求
         client.indices().delete(request, RequestOptions.DEFAULT);
     }
 
@@ -56,7 +53,7 @@ class HotelIndexTest {
     @BeforeEach
     void setUp() {
         client = new RestHighLevelClient(RestClient.builder(
-                HttpHost.create("http://127.0.0.1:9200")
+                HttpHost.create("http://192.168.150.101:9200")
         ));
     }
 
