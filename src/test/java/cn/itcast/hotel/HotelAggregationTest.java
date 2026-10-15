@@ -1,98 +1,56 @@
 package cn.itcast.hotel;
 
-import org.apache.http.HttpHost;
-import org.elasticsearch.action.search.SearchRequest;
-import org.elasticsearch.action.search.SearchResponse;
-import org.elasticsearch.client.RequestOptions;
-import org.elasticsearch.client.RestClient;
-import org.elasticsearch.client.RestHighLevelClient;
-import org.elasticsearch.search.aggregations.AggregationBuilders;
-import org.elasticsearch.search.aggregations.Aggregations;
-import org.elasticsearch.search.aggregations.bucket.terms.Terms;
-import org.elasticsearch.search.suggest.Suggest;
-import org.elasticsearch.search.suggest.SuggestBuilder;
-import org.elasticsearch.search.suggest.SuggestBuilders;
-import org.elasticsearch.search.suggest.completion.CompletionSuggestion;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
+import cn.itcast.hotel.pojo.HotelDoc;
+import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch._types.aggregations.Aggregate;
+import co.elastic.clients.elasticsearch._types.aggregations.StringTermsBucket;
+import co.elastic.clients.elasticsearch.core.SearchResponse;
+import co.elastic.clients.elasticsearch.core.search.CompletionSuggestOption;
+import co.elastic.clients.elasticsearch.core.search.Suggestion;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 @SpringBootTest
 class HotelAggregationTest {
 
-    private RestHighLevelClient client;
+    @Autowired
+    private ElasticsearchClient client;
 
     @Test
     void testAgg() throws IOException {
-        // 1.准备请求
-        SearchRequest request = new SearchRequest("hotel");
-        // 2.请求参数
-        // 2.1.size
-        request.source().size(0);
-        // 2.2.聚合
-        request.source().aggregation(
-                AggregationBuilders.terms("brandAgg").field("brand").size(20));
-        // 3.发出请求
-        SearchResponse response = client.search(request, RequestOptions.DEFAULT);
-        // 4.解析结果
-        Aggregations aggregations = response.getAggregations();
-        // 4.1.根据聚合名称，获取聚合结果
-        Terms brandAgg = aggregations.get("brandAgg");
-        // 4.2.获取buckets
-        List<? extends Terms.Bucket> buckets = brandAgg.getBuckets();
-        // 4.3.遍历
-        for (Terms.Bucket bucket : buckets) {
-            String brandName = bucket.getKeyAsString();
-            System.out.println("brandName = " + brandName);
-            long docCount = bucket.getDocCount();
-            System.out.println("docCount = " + docCount);
+        SearchResponse<Void> response = client.search(s -> s
+                .index("hotel")
+                .size(0)
+                .aggregations("brandAgg", a -> a.terms(t -> t.field("brand").size(20))), Void.class);
+
+        Map<String, Aggregate> aggregations = response.aggregations();
+        List<StringTermsBucket> buckets = aggregations.get("brandAgg").sterms().buckets().array();
+        for (StringTermsBucket bucket : buckets) {
+            System.out.println("brandName = " + bucket.key().stringValue());
+            System.out.println("docCount = " + bucket.docCount());
         }
     }
 
     @Test
     void testSuggest() throws IOException {
-        // 1.准备请求
-        SearchRequest request = new SearchRequest("hotel");
-        // 2.请求参数
-        request.source().suggest(new SuggestBuilder()
-                .addSuggestion(
-                        "hotelSuggest",
-                        SuggestBuilders
-                                .completionSuggestion("suggestion")
+        SearchResponse<HotelDoc> response = client.search(s -> s
+                .index("hotel")
+                .suggest(sg -> sg.suggesters("hotelSuggest", f -> f
+                        .prefix("s")
+                        .completion(c -> c
+                                .field("suggestion")
                                 .size(10)
-                                .skipDuplicates(true)
-                                .prefix("s")
-                ));
-        // 3.发出请求
-        SearchResponse response = client.search(request, RequestOptions.DEFAULT);
-        // 4.解析
-        Suggest suggest = response.getSuggest();
-        // 4.1.根据名称获取结果
-        CompletionSuggestion suggestion = suggest.getSuggestion("hotelSuggest");
-        // 4.2.获取options
-        for (CompletionSuggestion.Entry.Option option : suggestion.getOptions()) {
-            // 4.3.获取补全的结果
-            String str = option.getText().toString();
-            System.out.println(str);
+                                .skipDuplicates(true)))), HotelDoc.class);
+
+        for (Suggestion<HotelDoc> suggestion : response.suggest().get("hotelSuggest")) {
+            for (CompletionSuggestOption<HotelDoc> option : suggestion.completion().options()) {
+                System.out.println(option.text());
+            }
         }
     }
-
-    @BeforeEach
-    void setUp() {
-        client = new RestHighLevelClient(RestClient.builder(
-                HttpHost.create("http://192.168.150.101:9200")
-        ));
-    }
-
-    @AfterEach
-    void tearDown() throws IOException {
-        client.close();
-    }
-
-
-
 }

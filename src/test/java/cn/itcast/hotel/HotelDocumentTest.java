@@ -3,31 +3,24 @@ package cn.itcast.hotel;
 import cn.itcast.hotel.pojo.Hotel;
 import cn.itcast.hotel.pojo.HotelDoc;
 import cn.itcast.hotel.service.IHotelService;
-import com.alibaba.fastjson.JSON;
-import org.apache.http.HttpHost;
-import org.elasticsearch.action.bulk.BulkRequest;
-import org.elasticsearch.action.delete.DeleteRequest;
-import org.elasticsearch.action.get.GetRequest;
-import org.elasticsearch.action.get.GetResponse;
-import org.elasticsearch.action.index.IndexRequest;
-import org.elasticsearch.action.update.UpdateRequest;
-import org.elasticsearch.client.RequestOptions;
-import org.elasticsearch.client.RestClient;
-import org.elasticsearch.client.RestHighLevelClient;
-import org.elasticsearch.xcontent.XContentType;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
+import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch.core.bulk.BulkOperation;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @SpringBootTest
 class HotelDocumentTest {
 
-    private RestHighLevelClient client;
+    private static final String INDEX = "hotel";
+
+    @Autowired
+    private ElasticsearchClient client;
 
     @Autowired
     private IHotelService hotelService;
@@ -36,50 +29,39 @@ class HotelDocumentTest {
     void testAddDocument() throws IOException {
         // 1.查询数据库hotel数据
         Hotel hotel = hotelService.getById(61083L);
-        // 2.转换为HotelDoc
+        // 2.转换为HotelDoc，客户端内部完成 JSON 序列化
         HotelDoc hotelDoc = new HotelDoc(hotel);
-        // 3.转JSON
-        String json = JSON.toJSONString(hotelDoc);
 
-        // 1.准备Request
-        IndexRequest request = new IndexRequest("hotel").id(hotelDoc.getId().toString());
-        // 2.准备请求参数DSL，其实就是文档的JSON字符串
-        request.source(json, XContentType.JSON);
-        // 3.发送请求
-        client.index(request, RequestOptions.DEFAULT);
+        // PUT /hotel/_doc/{id}
+        client.index(i -> i
+                .index(INDEX)
+                .id(hotelDoc.getId().toString())
+                .document(hotelDoc));
     }
 
     @Test
     void testGetDocumentById() throws IOException {
-        // 1.准备Request      // GET /hotel/_doc/{id}
-        GetRequest request = new GetRequest("hotel", "61083");
-        // 2.发送请求
-        GetResponse response = client.get(request, RequestOptions.DEFAULT);
-        // 3.解析响应结果
-        String json = response.getSourceAsString();
+        // GET /hotel/_doc/{id}
+        HotelDoc hotelDoc = client
+                .get(g -> g.index(INDEX).id("61083"), HotelDoc.class)
+                .source();
 
-        HotelDoc hotelDoc = JSON.parseObject(json, HotelDoc.class);
         System.out.println("hotelDoc = " + hotelDoc);
     }
 
     @Test
     void testDeleteDocumentById() throws IOException {
-        // 1.准备Request      // DELETE /hotel/_doc/{id}
-        DeleteRequest request = new DeleteRequest("hotel", "61083");
-        // 2.发送请求
-        client.delete(request, RequestOptions.DEFAULT);
+        // DELETE /hotel/_doc/61083
+        client.delete(d -> d.index(INDEX).id("61083"));
     }
 
     @Test
     void testUpdateById() throws IOException {
-        // 1.准备Request
-        UpdateRequest request = new UpdateRequest("hotel", "61083");
-        // 2.准备参数
-        request.doc(
-                "price", "870"
-        );
-        // 3.发送请求
-        client.update(request, RequestOptions.DEFAULT);
+        // POST /hotel/_update/61083，partial doc 只需包含要修改的字段
+        client.update(u -> u
+                .index(INDEX)
+                .id("61083")
+                .doc(Collections.singletonMap("price", "870")), HotelDoc.class);
     }
 
     @Test
@@ -87,34 +69,16 @@ class HotelDocumentTest {
         // 查询所有的酒店数据
         List<Hotel> list = hotelService.list();
 
-        // 1.准备Request
-        BulkRequest request = new BulkRequest();
-        // 2.准备参数
+        List<BulkOperation> operations = new ArrayList<>(list.size());
         for (Hotel hotel : list) {
-            // 2.1.转为HotelDoc
             HotelDoc hotelDoc = new HotelDoc(hotel);
-            // 2.2.转json
-            String json = JSON.toJSONString(hotelDoc);
-            // 2.3.添加请求
-            request.add(new IndexRequest("hotel").id(hotel.getId().toString()).source(json, XContentType.JSON));
+            operations.add(BulkOperation.of(o -> o
+                    .index(i -> i
+                            .index(INDEX)
+                            .id(hotel.getId().toString())
+                            .document(hotelDoc))));
         }
 
-        // 3.发送请求
-        client.bulk(request, RequestOptions.DEFAULT);
+        client.bulk(b -> b.operations(operations));
     }
-
-    @BeforeEach
-    void setUp() {
-        client = new RestHighLevelClient(RestClient.builder(
-                HttpHost.create("http://192.168.150.101:9200")
-        ));
-    }
-
-    @AfterEach
-    void tearDown() throws IOException {
-        client.close();
-    }
-
-
-
 }

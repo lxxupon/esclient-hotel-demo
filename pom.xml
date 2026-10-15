@@ -16,12 +16,27 @@
     <properties>
         <java.version>1.8</java.version>
         <elasticsearch.version>7.17.23</elasticsearch.version>
+        <!-- 新客户端依赖 jackson-core 2.12+（JsonParser.isExpectedNumberIntToken），
+             Spring Boot 2.3 BOM 默认是 2.11，需上调 -->
+        <jackson-bom.version>2.13.4</jackson-bom.version>
     </properties>
     <dependencies>
-        <!--elasticsearch-->
+        <!--elasticsearch Java API Client（RestHighLevelClient 的替代品）-->
+        <dependency>
+            <groupId>co.elastic.clients</groupId>
+            <artifactId>elasticsearch-java</artifactId>
+            <version>${elasticsearch.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.elasticsearch.client</groupId>
-            <artifactId>elasticsearch-rest-high-level-client</artifactId>
+            <artifactId>elasticsearch-rest-client</artifactId>
+        </dependency>
+        <!-- Spring Boot 2.3 BOM 会把 jakarta.json-api 降到 1.1.6（包名仍是 javax.json），
+             新客户端需要 2.0.x 的 jakarta.json 包，故显式锁定版本 -->
+        <dependency>
+            <groupId>jakarta.json</groupId>
+            <artifactId>jakarta.json-api</artifactId>
+            <version>2.0.1</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -53,12 +68,6 @@
                 </exclusion>
             </exclusions>
 
-        </dependency>
-		<!--FastJson-->
-        <dependency>
-            <groupId>com.alibaba</groupId>
-            <artifactId>fastjson</artifactId>
-            <version>1.2.71</version>
         </dependency>
 		<dependency>
             <groupId>org.apache.commons</groupId>
