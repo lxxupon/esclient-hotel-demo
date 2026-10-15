@@ -1,0 +1,61 @@
+# DEPS 本地开发环境：Elasticsearch 7.17.23 + IK 中文分词 + Kibana（三件套版本严格一致）
+#
+# 常用命令（在本目录执行）：
+#   docker compose up -d --build    # 首次启动/改了 Dockerfile 后构建并启动
+#   docker compose ps               # 查看状态（ES 变 healthy 后 Kibana 才启动）
+#   docker compose logs -f          # 跟日志
+#   docker compose down             # 停止（数据保留在命名卷 es-data）
+#   docker compose down -v          # 停止并清空 ES 数据
+#
+# 注意：会占用本机 9200/5601 端口。如 Windows 原生安装的 ES 还在运行，先关掉它。
+#
+# 改自定义词典（ik-config/extra_main.dic 等文件）后：docker compose restart elasticsearch
+# 改 elasticsearch.yml / kibana.yml 后：docker compose restart elasticsearch kibana
+
+services:
+  elasticsearch:
+    build: es-ik-kibana
+    image: deps-es-ik:7.17.23
+    container_name: deps-es
+    restart: unless-stopped
+    environment:
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+      # 主配置：挂载覆盖镜像默认值，便于直接改文件
+      - ./es-config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro
+      # IK 词典目录：目录名必须是 analysis-ik，改词典后重启容器生效
+      - ./ik-config:/usr/share/elasticsearch/config/analysis-ik
+    ports:
+      - "9200:9200"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  kibana:
+    image: kibana:7.17.23
+    container_name: deps-kibana
+    restart: unless-stopped
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    volumes:
+      - ./kibana-config/kibana.yml:/usr/share/kibana/config/kibana.yml:ro
+    ports:
+      - "5601:5601"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:5601/api/status || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+
+volumes:
+  es-data:

@@ -1,0 +1,17 @@
+# 单节点本地开发配置；生产环境另配集群/认证，不要直接复用本文件
+cluster.name: deps-es
+node.name: node-1
+network.host: 0.0.0.0
+http.port: 9200
+
+# 单节点开发模式（自动跳过 bootstrap 检查）
+discovery.type: single-node
+
+# 开发环境关闭认证；生产必须开启并设置密码
+xpack.security.enabled: false
+
+# 本机/内网拉不到外网 geoip 库，关闭下载器避免刷 ERROR 日志
+ingest.geoip.downloader.enabled: false
+
+# 锁定内存（配合 compose 的 ulimits.memlock）
+bootstrap.memory_lock: true

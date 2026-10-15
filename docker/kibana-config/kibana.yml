@@ -1,0 +1,8 @@
+server.name: deps-kibana
+server.host: "0.0.0.0"
+
+# 容器网络内直接用服务名访问 ES
+elasticsearch.hosts: ["http://elasticsearch:9200"]
+
+# 界面中文
+i18n.locale: "zh-CN"
