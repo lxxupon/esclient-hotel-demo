@@ -102,8 +102,9 @@
 <!-- 引入组件库 -->
 <script src="https://unpkg.com/element-ui/lib/index.js"></script>
 <script>
+  // 页面与接口同源（都由本服务的 static 提供），用相对路径即可，无需跨域配置
   // 设置后台服务地址
-  axios.defaults.baseURL = "http://localhost:8099";
+  //axios.defaults.baseURL = "http://localhost:8099";
   axios.defaults.timeout = 3000;
 
   const app = new Vue({
