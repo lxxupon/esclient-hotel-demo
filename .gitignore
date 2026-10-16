@@ -40,5 +40,3 @@ target/
 .DS_Store
 Thumbs.db
 
-# Local tooling data
-.workbuddy/
