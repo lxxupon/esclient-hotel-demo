@@ -1,0 +1,39 @@
+# DEPS 本地开发环境：RabbitMQ 3.8（带 management 管理界面）
+#
+# 版本依据：Spring Boot 2.3.10.RELEASE 管理 spring-rabbit 2.2.x，对应 RabbitMQ 3.8 时代版本。
+#
+# 常用命令（在本目录执行）：
+#   docker compose up -d          # 启动
+#   docker compose ps             # 查看状态（变 healthy 后可连接）
+#   docker compose logs -f        # 跟日志
+#   docker compose down           # 停止（数据保留在命名卷 rabbitmq-data）
+#   docker compose down -v        # 停止并清空 MQ 数据
+#
+# 连接信息（与 src/main/resources/application.yaml 一致）：
+#   AMQP      127.0.0.1:5672   itcast / 123321   vhost: /
+#   管理界面  http://127.0.0.1:15672  （账号同上）
+#
+# 注意：会占用本机 5672/15672 端口。
+
+services:
+  rabbitmq:
+    image: rabbitmq:3.8-management
+    container_name: deps-rabbitmq
+    restart: unless-stopped
+    environment:
+      - RABBITMQ_DEFAULT_USER=itcast
+      - RABBITMQ_DEFAULT_PASS=123321
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 20s
+
+volumes:
+  rabbitmq-data:
