@@ -1,5 +1,6 @@
 package cn.itcast.hotel.config;
 
+import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.json.jackson.JacksonJsonpMapper;
 import co.elastic.clients.transport.ElasticsearchTransport;
@@ -43,6 +44,13 @@ public class EsClientConfig {
     public ElasticsearchClient elasticsearchClient(RestClient restClient) {
         ElasticsearchTransport transport = new RestClientTransport(restClient, buildJsonpMapper());
         return new ElasticsearchClient(transport);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(ElasticsearchAsyncClient.class)
+    public ElasticsearchAsyncClient elasticsearchAsyncClient(RestClient restClient) {
+        ElasticsearchTransport transport = new RestClientTransport(restClient, buildJsonpMapper());
+        return new ElasticsearchAsyncClient(transport);
     }
 
     @Bean(destroyMethod = "close")
